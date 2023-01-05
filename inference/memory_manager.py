@@ -15,6 +15,7 @@ class MemoryManager:
 
         self.enable_long_term = config['enable_long_term']
         self.enable_long_term_usage = config['enable_long_term_count_usage']
+        self.num_input = config.get('num_input', 1)
         if self.enable_long_term:
             self.max_mt_frames = config['max_mid_term_frames']
             self.min_mt_frames = config['min_mid_term_frames']
@@ -44,6 +45,7 @@ class MemoryManager:
         assert self.enable_long_term_usage == config['enable_long_term_count_usage'], 'cannot update this'
 
         self.enable_long_term_usage = config['enable_long_term_count_usage']
+        self.num_input = config.get('num_input', 1)
         if self.enable_long_term:
             self.max_mt_frames = config['max_mid_term_frames']
             self.min_mt_frames = config['min_mid_term_frames']
@@ -219,23 +221,35 @@ class MemoryManager:
             mem_size_in_this_group = gv.shape[-1]
             if mem_size_in_this_group == total_work_mem_size:
                 # full LT
-                candidate_value.append(gv[:,:,HW:-self.min_work_elements+HW])
+                candidate_value.append(
+                    gv[:,:,HW*self.num_input:-self.min_work_elements+HW*self.num_input]
+                )
             else:
                 # mem_size is smaller than total_work_mem_size, but at least HW
-                assert HW <= mem_size_in_this_group < total_work_mem_size
-                if mem_size_in_this_group > self.min_work_elements+HW:
+                assert HW*self.num_input <= mem_size_in_this_group < total_work_mem_size
+                if mem_size_in_this_group > self.min_work_elements+HW*self.num_input:
                     # part of this object group still goes into LT
-                    candidate_value.append(gv[:,:,HW:-self.min_work_elements+HW])
+                    candidate_value.append(
+                        gv[:,:,HW*self.num_input:-self.min_work_elements+HW*self.num_input]
+                    )
                 else:
                     # this object group cannot go to the LT at all
                     candidate_value.append(None)
 
         # perform memory consolidation
         prototype_key, prototype_value, prototype_shrinkage = self.consolidation(
-            *self.work_mem.get_all_sliced(HW, -self.min_work_elements+HW), candidate_value)
+            *self.work_mem.get_all_sliced(
+                HW*self.num_input, -self.min_work_elements+HW*self.num_input
+            ),
+            candidate_value,
+        )
 
         # remove consolidated working memory
-        self.work_mem.sieve_by_range(HW, -self.min_work_elements+HW, min_size=self.min_work_elements+HW)
+        self.work_mem.sieve_by_range(
+            HW*self.num_input,
+            -self.min_work_elements+HW*self.num_input,
+            min_size=self.min_work_elements-HW*self.num_input,  # Used to be +, which I think is a bug
+        )
 
         # add to long-term memory
         self.long_mem.add(prototype_key, prototype_value, prototype_shrinkage, selection=None, objects=None)

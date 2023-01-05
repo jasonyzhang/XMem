@@ -39,6 +39,9 @@ class InferenceCore:
         # self.all_labels = [l.item() for l in all_labels]
         self.all_labels = all_labels
 
+    def increment_num_input(self, delta=1):
+        self.memory.num_input += delta
+
     def step(self, image, mask=None, valid_labels=None, end=False):
         # image: 3*H*W
         # mask: num_objects*H*W or None
