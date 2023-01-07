@@ -41,6 +41,8 @@ class InferenceCore:
 
     def increment_num_input(self, delta=1):
         self.memory.num_input += delta
+        self.memory.max_mt_frames += delta
+        self.memory.min_mt_frames += delta
 
     def step(self, image, mask=None, valid_labels=None, end=False):
         # image: 3*H*W

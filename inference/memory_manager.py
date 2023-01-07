@@ -17,8 +17,8 @@ class MemoryManager:
         self.enable_long_term_usage = config['enable_long_term_count_usage']
         self.num_input = config.get('num_input', 1)
         if self.enable_long_term:
-            self.max_mt_frames = config['max_mid_term_frames']
-            self.min_mt_frames = config['min_mid_term_frames']
+            self.max_mt_frames = config['max_mid_term_frames'] + self.num_input - 1
+            self.min_mt_frames = config['min_mid_term_frames'] + self.num_input - 1
             self.num_prototypes = config['num_prototypes']
             self.max_long_elements = config['max_long_term_elements']
 
