@@ -63,6 +63,7 @@ def run_xmem_exemplar(
     output_dir: Optional[str] = None,
     config: Optional[dict] = None,
     network: Optional[XMem] = None,
+    pbar: Optional[bool] = False,
 ):
     """
     Runs XMem Masks propagation given exemplar images and masks.
@@ -79,6 +80,8 @@ def run_xmem_exemplar(
             provided. Defaults to None.
         output_dir (Optional[str], optional): Output directory. If None, returns a list
             of masks. Defaults to None.
+        pbar (Optional[bool], optional): Whether to show a progress bar. Defaults to
+            False.
 
     Returns:
         List[np.ndarray]: List of masks.
@@ -108,7 +111,8 @@ def run_xmem_exemplar(
     vid_length = len(dataset)
     pred_masks = []
 
-    for index, data in tqdm(enumerate(dataset), total=vid_length):
+    loop = tqdm(enumerate(dataset), total=vid_length) if pbar else enumerate(dataset)
+    for index, data in loop:
         with torch.cuda.amp.autocast(enabled=True):
             rgb = data["rgb"].cuda()
             msk = data.get("mask")
@@ -116,12 +120,12 @@ def run_xmem_exemplar(
             shape = info["shape"]
             need_resize = info["need_resize"]
 
+            if msk is not None:
+                num_mask_seen += 1
+
             if num_mask_seen == 0:
-                if msk is not None:
-                    num_mask_seen += 1
-                else:
-                    # no point to do anything without a mask
-                    continue
+                # No point doing anything without a mask
+                continue
 
             if config["flip"]:
                 rgb = torch.flip(rgb, dims=[-1])
